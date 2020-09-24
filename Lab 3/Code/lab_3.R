@@ -1,5 +1,5 @@
 # 17 September 2020
-# Multivariate Statistics Lab 3
+# Multivariate Statistics Lab 3—Ordination 1
 # David Mason
 # Set up R session ####
 library(mvnormtest)
