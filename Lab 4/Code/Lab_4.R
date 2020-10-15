@@ -1,4 +1,4 @@
-# # 24 September 2020
+# 24 September 2020
 # Multivariate Statistics Lab 4—Ordination 2
 # David Mason
 # Set up R session ####
