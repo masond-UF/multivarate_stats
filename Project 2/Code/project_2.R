@@ -8,17 +8,24 @@ library(cluster)
 library(mvnormtest)
 library(MVN)
 library(tidyverse)
+library(ade4)
+library(pvclust)
 
 pitcher <- read.csv("Project 2/Data/Darlingtonia.csv", row=1, header=TRUE)
+data(dune)
 # Explore data ####
 mshapiro.test(t(pitcher))
 mvn(pitcher, mvnTest = "mardia")
 
-pitcher_hist <- ggplot(gather(pitcher), aes(value)) + 
+pitcher.hist <- ggplot(gather(pitcher), aes(value)) + 
   					 	  geom_histogram(bins = 10) + 
   					 	  facet_wrap(~key, scales = 'free_x',ncol = 1)
 
-pitcher_z <- scale(pitcher)
+pitcher.tot<- apply(pitcher,2, sum)
+cv(pitcher.tot)
+
+pitcher.z <- scale(pitcher)
+
 ####################  K-means clustering ####################  
 # Scree plot method ####
 # Set a vector for the loop to fill. 
@@ -32,7 +39,7 @@ for (i in 1:10)
   
 	# run the kmeans function for each number of clusters (i) 
 	# and extract the within sum of squares for each.
-	wss[i] <- sum(kmeans(pitcher_z, centers = i, nstart = 25)$withinss)
+	wss[i] <- sum(kmeans(pitcher.z, centers = i, nstart = 25)$withinss)
 
 	# Check out you vector of within group sum of squares for one to eight groups:
 	wss 
@@ -42,11 +49,92 @@ for (i in 1:10)
 # Silhouette fit ####
 sil <- rep(0,10)
 	for (i in 2:10)
- 	sil[i] <- summary(silhouette(kmeans(pitcher_z, centers = i, 
- 						iter.max = 100, nstart = 25)$cluster, dist(pitcher_z)))$avg.width
+ 	sil[i] <- summary(silhouette(kmeans(pitcher.z, centers = i, 
+ 						iter.max = 100, nstart = 25)$cluster, dist(pitcher.z)))$avg.width
 	plot(2:10, sil[2:10], type = "b", xlab = "Number of groups", ylab = "average silhouette width ")
 	
 	
 	# method dist = "binary"
 	# PCA numb of observations
 	# 1-total number
+
+# PCA plot ####
+pitcher.pc <- princomp(pitcher.z, cor=F)
+summary(pitcher.pc)
+pitcher.pc$loadings
+
+pitcher.z.kop <- kmeans(pitcher.z, centers= 3, iter.max=10, nstart=25)
+
+my.color.vector <- rep("green", times=nrow(pitcher.z))
+my.color.vector[pitcher.z.kop$cluster==1] <- "blue"
+my.color.vector[pitcher.z.kop$cluster==2] <- "green"
+my.color.vector[pitcher.z.kop$cluster==3] <- "red"
+
+plot(pitcher.pc$scores[,1], pitcher.pc$scores[,2], 
+		 ylim=range(pitcher.pc$scores[,1]),xlim=range(pitcher.pc$scores[,1]*1.25), 
+		 xlab="PC 1", ylab="PC 2", type ='n', lwd=2)
+text(pitcher.pc$scores[,1], pitcher.pc$scores[,2], labels=rownames(pitcher.z),
+		 cex=1.25, lwd=2, col=my.color.vector)
+
+biplot(pitcher.pc, xlabs= rep("",87),xlim=range(-.55,.55))
+text(pitcher.pc$scores[,1], pitcher.pc$scores[,2], labels=rownames(pitcher.z), 
+		 cex=1.25, lwd=2, col=my.color.vector)
+# MRPP ####
+groups <- pitcher.z.kop$cluster
+pitcher.dist <- vegdist(pitcher.z, method="euclidean")
+
+set.seed(11)
+pitcher.z.MRPP <- mrpp(pitcher.z, groups, permutations = 1000)
+# ANOSIM ####
+pitcher.j <- vegdist(pitcher, "bray") 
+set.seed(11) 
+pitcher.z.ANOSIM <- anosim(pitcher.j, groups, permutations = 1000)
+pitcher.z.ANOSIM
+##########  Polythetic Agglomerative Hierarchical Clustering ##########  
+# Clustering algorithms ####
+pitcher.j <- vegdist(dune, "jaccard") 
+
+singleTree <- hclust(pitcher.j, method = "single")
+completeTree <- hclust(pitcher.j, method = "complete")
+centroidTree <- hclust(pitcher.j, method = "centroid")
+medianTree <- hclust(pitcher.j, method = "median")
+averageTree <- hclust(pitcher.j, method = "average")
+wardTree <- hclust(pitcher.j, method = "ward.D2")
+
+plot(averageTree)
+# Cophenetic correlation coefficient ####
+e <- function(expr) eval(parse(text=expr)) 
+cc <- NULL 
+
+#list of names for the loop
+methodList <- c("singleTree", "completeTree", "centroidTree", "medianTree", "averageTree", "wardTree") 
+
+# run the loop
+for (i in methodList) {
+  cc[i]<-round(cor(pitcher.j,cophenetic(e(i))),2)
+}
+cc
+# Agglomerative coefficient ####
+ag1 <- coef.hclust(singleTree)
+ag2 <- coef.hclust(completeTree)
+ag3 <- coef.hclust(averageTree)
+ag4 <- coef.hclust(wardTree)
+
+methods <- c("single","complete", "average", "ward")
+agc <- round(c(ag1,ag2,ag3,ag4),2)
+agcTable <- data.frame(methods,agc)
+# Bootstrapping ####
+jaccard <- function(x) {
+  x <- t(as.matrix(x))
+  res <- vegdist(x, method="jaccard")
+  res <- as.dist(res)
+  attr(res, "method") <- "jaccard"
+  return(res)
+}
+
+boot  <- pvclust(t(pitcher), method.hclust="average",
+				 method.dist=jaccard,iseed=22, nboot=100)
+
+plot(boot)
+pvrect(boot, alpha=0.95, pv="au")
+pvrect(boot, alpha=0.95, pv="bp")
