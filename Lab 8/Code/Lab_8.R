@@ -171,3 +171,60 @@ Outliers
 # Linearity ####
 pairs(iris[,1:4]) # looks good
 # Discriminant analysis ####
+set.seed(11)
+train <- sample(1:150, 75)
+prior <- table(iris$Sp[train])
+
+iris.LDA <- lda(Species ~ ., iris, prior = cbind(prior/75), subset = train)
+?lda()
+# Assessing and interpreting canonical axes ####
+iris.LDA.p <- predict(iris.LDA, iris[train, ])
+corTest <- lm(iris.LDA.p$x~iris$Sp[train])
+summary(corTest)
+# Plot canonical scores and axes ####
+plot(iris.LDA, xlim = c(-11,11), ylim = c(-6,6))
+# Classification accuracy ####
+ct <- table(iris[train, ]$Species, predict(iris.LDA, iris[train, ])$class) 
+
+#Change to a table of proportions:
+pct <- prop.table(ct)
+pct
+
+# Calculate classification rate by summing the diagonal:
+sum(diag(pct))
+
+# Interpreting canonical axes (raw coefficients, 
+# Standardized weights, and structure coefficients #####
+iris.mod <- lm(cbind(Sepal.Length, Sepal.Width, Petal.Length, Petal.Width) ~ 
+							 	Species, data=iris[train, ])
+iris.can <- candisc(iris.mod, data=iris[train, ])
+
+iris.can$coeffs.raw
+iris.can$coeffs.std
+iris.can$structure
+iris.LDA$scaling
+# Validating canonical axes ####
+iris.LDA.new <- predict(iris.LDA , iris[-train, ])
+ynew.table <- table(iris[-train,]$Species,iris.LDA.new$class)
+ynew.table
+sum(diag(prop.table(ynew.table)))
+# MANOVA, the other side of the coin of DA ####
+Y <- as.matrix(iris[,1:4])
+Sp <- factor(iris[,5])
+
+fit <- manova(Y ~ Sp)
+summary(fit,test="Wilks")
+
+# Post-hoc tests:
+Yset <- as.matrix(iris[1:50,1:4])
+Yversi <- as.matrix(iris[51:100,1:4])
+Yvirg <- as.matrix(iris[101:150,1:4])
+Sp <- factor(iris[,5])
+
+fit1 <- manova(rbind(Yset,Yversi) ~ Sp[1:100])
+summary(fit1,test="Hotelling-Lawley")
+fit2 <- manova(rbind(Yversi,Yvirg) ~ Sp[51:150])
+summary(fit2,test="Hotelling-Lawley")
+fit3 <- manova(rbind(Yset,Yvirg) ~ Sp[-c(51:100)])
+summary(fit3,test="Hotelling-Lawley")
+
