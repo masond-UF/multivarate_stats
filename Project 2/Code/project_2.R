@@ -92,14 +92,14 @@ pitcher.z.ANOSIM <- anosim(pitcher.j, groups, permutations = 1000)
 pitcher.z.ANOSIM
 ##########  Polythetic Agglomerative Hierarchical Clustering ##########  
 # Clustering algorithms ####
-pitcher.j <- vegdist(dune, "jaccard") 
+dune.j <- vegdist(dune, "jaccard") 
 
-singleTree <- hclust(pitcher.j, method = "single")
-completeTree <- hclust(pitcher.j, method = "complete")
-centroidTree <- hclust(pitcher.j, method = "centroid")
-medianTree <- hclust(pitcher.j, method = "median")
-averageTree <- hclust(pitcher.j, method = "average")
-wardTree <- hclust(pitcher.j, method = "ward.D2")
+singleTree <- hclust(dune.j, method = "single")
+completeTree <- hclust(dune.j, method = "complete")
+centroidTree <- hclust(dune.j, method = "centroid")
+medianTree <- hclust(dune.j, method = "median")
+averageTree <- hclust(dune.j, method = "average")
+wardTree <- hclust(dune.j, method = "ward.D2")
 
 plot(averageTree)
 # Cophenetic correlation coefficient ####
@@ -111,7 +111,7 @@ methodList <- c("singleTree", "completeTree", "centroidTree", "medianTree", "ave
 
 # run the loop
 for (i in methodList) {
-  cc[i]<-round(cor(pitcher.j,cophenetic(e(i))),2)
+  cc[i]<-round(cor(dune.j,cophenetic(e(i))),2)
 }
 cc
 # Agglomerative coefficient ####
@@ -123,6 +123,7 @@ ag4 <- coef.hclust(wardTree)
 methods <- c("single","complete", "average", "ward")
 agc <- round(c(ag1,ag2,ag3,ag4),2)
 agcTable <- data.frame(methods,agc)
+agcTable
 # Bootstrapping ####
 jaccard <- function(x) {
   x <- t(as.matrix(x))
@@ -132,9 +133,10 @@ jaccard <- function(x) {
   return(res)
 }
 
-boot  <- pvclust(t(pitcher), method.hclust="average",
-				 method.dist=jaccard,iseed=22, nboot=100)
+boot  <- pvclust(t(dune), method.hclust="average",
+				 method.dist="binary",iseed=22, nboot=100)
 
 plot(boot)
 pvrect(boot, alpha=0.95, pv="au")
-pvrect(boot, alpha=0.95, pv="bp")
+
+##########   Polythetic Divisive Hierarchical Clustering  ##########  
