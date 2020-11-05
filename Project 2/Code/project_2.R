@@ -12,7 +12,8 @@ library(ade4)
 library(pvclust)
 
 pitcher <- read.csv("Project 2/Data/Darlingtonia.csv", row=1, header=TRUE)
-data(dune)
+dune <- read.csv("Project 2/Data/dune_data.csv", row=1, header=TRUE)
+
 # Explore data ####
 mshapiro.test(t(pitcher))
 mvn(pitcher, mvnTest = "mardia")
@@ -21,10 +22,23 @@ pitcher.hist <- ggplot(gather(pitcher), aes(value)) +
   					 	  geom_histogram(bins = 10) + 
   					 	  facet_wrap(~key, scales = 'free_x',ncol = 1)
 
+pitcher$tube_diam <- log1p(pitcher$tube_diam)
+pitcher$keel_diam <- log1p(pitcher$keel_diam)
+pitcher$wing2_length <- log1p(pitcher$wing2_length)
+pitcher$hoodarea <- log1p(pitcher$hoodarea)
+pitcher$wingarea <- log1p(pitcher$wingarea)
+pitcher$tubearea <- log1p(pitcher$tubearea)
+
 pitcher.tot<- apply(pitcher,2, sum)
 cv(pitcher.tot)
 
 pitcher.z <- scale(pitcher)
+
+dune.tot<- apply(dune,2, sum)
+cv(dune.tot)
+
+
+
 
 ####################  K-means clustering ####################  
 # Scree plot method ####
@@ -48,7 +62,7 @@ for (i in 1:10)
 		 	ylab = "Within groups sum of squares") 
 # Silhouette fit ####
 sil <- rep(0,10)
-	for (i in 2:10)
+	for (i in 2:9)
  	sil[i] <- summary(silhouette(kmeans(pitcher.z, centers = i, 
  						iter.max = 100, nstart = 25)$cluster, dist(pitcher.z)))$avg.width
 	plot(2:10, sil[2:10], type = "b", xlab = "Number of groups", ylab = "average silhouette width ")
@@ -63,12 +77,11 @@ pitcher.pc <- princomp(pitcher.z, cor=F)
 summary(pitcher.pc)
 pitcher.pc$loadings
 
-pitcher.z.kop <- kmeans(pitcher.z, centers= 3, iter.max=10, nstart=25)
+pitcher.z.kop <- kmeans(pitcher.z, centers= 2, iter.max=10, nstart=25)
 
 my.color.vector <- rep("green", times=nrow(pitcher.z))
 my.color.vector[pitcher.z.kop$cluster==1] <- "blue"
 my.color.vector[pitcher.z.kop$cluster==2] <- "green"
-my.color.vector[pitcher.z.kop$cluster==3] <- "red"
 
 plot(pitcher.pc$scores[,1], pitcher.pc$scores[,2], 
 		 ylim=range(pitcher.pc$scores[,1]),xlim=range(pitcher.pc$scores[,1]*1.25), 
@@ -134,9 +147,20 @@ jaccard <- function(x) {
 }
 
 boot  <- pvclust(t(dune), method.hclust="average",
-				 method.dist="binary",iseed=22, nboot=100)
+				 method.dist=jaccard,iseed=22, nboot=100)
 
 plot(boot)
 pvrect(boot, alpha=0.95, pv="au")
 
 ##########   Polythetic Divisive Hierarchical Clustering  ##########  
+dune.j <- vegdist(dune, "jaccard") 
+# Clustering algorithm ####
+dune.diana <- diana(dune.j)
+plot(dune.diana, which.plots = 2)
+# Cophenetic correlation coefficient #####
+dune.diana.coph <- cor(dune.j,cophenetic(dune.diana))
+dune.diana.coph
+# Calculate the divisive coefficient #####
+dune.diana$dc 
+
+
