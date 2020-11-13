@@ -2,12 +2,10 @@
 rm(list=ls()) 
 library(vegan)
 setwd("C:/Users/bbaiser/Dropbox/Multivariate/2015/Numerical Ecology Files/NEwR updated material/NEwR data")
-spe <- read.csv("DoubsSpe.csv", row.names=1)
-env <- read.csv("DoubsEnv.csv", row.names=1)
+spe <- read.csv("Lab 11/Data/DoubsSpe.csv", row.names=1)
+env <- read.csv("Lab 11/Data/DoubsEnv.csv", row.names=1)
 
-
-
-#########Modify Data
+######### Modify Data
 #remove site 8
 spe <- spe[-8, ]
 env <- env[-8, ]
